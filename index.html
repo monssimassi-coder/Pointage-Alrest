@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>POINTAGE ALREST</title>
+    <style>
+        :root { --blue: #1e3a8a; --green: #15803d; --red: #b91c1c; --sky: #0369a1; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; padding: 20px; }
+        .container { max-width: 1150px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        .error-field { border: 2px solid var(--red) !important; background-color: #fff1f2 !important; }
+        
+        .header-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        input, select { padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%; box-sizing: border-box; transition: 0.3s; }
+
+        .period-section { background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 25px; }
+        .period-header { font-weight: bold; color: var(--blue); display: block; width: 100%; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; }
+        .period-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 15px; align-items: end; }
+
+        /* Style Historique */
+        .history-zone { margin-top: 15px; padding: 10px; background: white; border-radius: 8px; border: 1px dashed #cbd5e1; }
+        .history-item { display: inline-block; background: #e0e7ff; color: #1e40af; padding: 5px 12px; border-radius: 20px; font-size: 12px; margin-right: 10px; margin-bottom: 5px; font-weight: bold; }
+
+        .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 20px 0; }
+        .stat-box { background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold; }
+        .stat-val { font-size: 18px; display: block; margin-top: 5px; font-weight: 800; }
+
+        .row-pointage { display: grid; grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1fr 1.2fr; padding: 8px; border-bottom: 1px solid #eee; align-items: center; text-align: center; }
+        .header-table { background: var(--blue); color: white; font-weight: bold; border-radius: 6px; }
+        
+        .weekend-row { background: #fff5f5; color: var(--red); }
+        .ferie-row { background: #f0fdf4 !important; color: var(--green) !important; font-weight: bold; }
+        .conge-row { background: #f0f9ff !important; color: var(--sky) !important; font-weight: bold; }
+
+        .btn { cursor: pointer; border: none; border-radius: 8px; font-weight: bold; padding: 15px; transition: 0.3s; }
+        .btn-excel { background: #166534; color: white; flex: 2; }
+        .btn-reset { background: #64748b; color: white; flex: 1; }
+        .btn-apply { background: var(--blue); color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 style="text-align:center; color: var(--blue); text-transform: uppercase; margin-top:0;">POINTAGE ALREST</h2>
+
+    <div class="header-inputs">
+        <input type="text" id="nom" placeholder="NOM" oninput="this.value = this.value.toUpperCase(); this.classList.remove('error-field')">
+        <input type="text" id="prenom" placeholder="Prénom" oninput="formatPrenom(this); this.classList.remove('error-field')">
+        <input type="text" id="post" placeholder="FONCTION" oninput="this.value = this.value.toUpperCase(); this.classList.remove('error-field')">
+        <input type="date" id="d1" onchange="verifierAuto()">
+        <input type="date" id="d2" onchange="verifierAuto()">
+    </div>
+
+    <div id="zonePeriodes" style="display:none;" class="period-section">
+        <div class="period-header">Appliquer une période spéciale</div>
+        <div class="period-grid">
+            <div><select id="typeSelect"><option value="Férié">JOUR FÉRIÉ</option><option value="Congé">CONGÉ</option><option value="Normal">TRAVAIL NORMAL</option></select></div>
+            <div><input type="date" id="pStart"></div>
+            <div><input type="date" id="pEnd"></div>
+            <button class="btn btn-apply" onclick="appliquerPeriode()">APPLIQUER</button>
+        </div>
+        <div id="historyZone" class="history-zone" style="display:none;">
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <div id="action-top" style="display:none; display: flex; gap: 10px; margin-bottom: 20px;">
+        <button class="btn btn-excel" onclick="exporterExcel()">TELECHARGER LE POINTAGE</button>
+        <button class="btn btn-reset" onclick="window.location.reload()">EFFACER TOUT</button>
+    </div>
+
+    <div id="zonePointage" style="display:none;">
+        <div class="stats-bar">
+            <div class="stat-box" style="color:var(--green)">Travaillés<br><span class="stat-val" id="stJ">0</span></div>
+            <div class="stat-box" style="color:var(--sky)">Congés<br><span class="stat-val" id="stCon">0</span></div>
+            <div class="stat-box" style="color:var(--green)">Fériés<br><span class="stat-val" id="stFer">0</span></div>
+            <div class="stat-box" style="color:var(--red)">Absences<br><span class="stat-val" id="stAbsJ">0</span></div>
+            <div class="stat-box" style="color:var(--blue)">H. Totales<br><span class="stat-val" id="stH">0h</span></div>
+            <div class="stat-box" style="color:orange">H. Sup<br><span class="stat-val" id="stS">0h</span></div>
+        </div>
+        <div class="row-pointage header-table">
+            <div>Date</div><div>Statut</div><div>Début</div><div>Fin</div><div>Heures</div><div>H. Sup</div><div>Type Jour</div>
+        </div>
+        <div id="corps-table"></div>
+    </div>
+</div>
+
+<script>
+    function formatPrenom(input) {
+        let val = input.value;
+        if (val.length > 0) { input.value = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase(); }
+    }
+
+    function toMin(t) { 
+        if(!t) return 0;
+        const p = t.split(':'); 
+        return parseInt(p[0]) * 60 + parseInt(p[1]); 
+    }
+
+    function verifierAuto() {
+        const d1 = document.getElementById('d1').value;
+        const d2 = document.getElementById('d2').value;
+        if (d1 && d2) genererCalendrier();
+    }
+
+    function genererCalendrier() {
+        const start = new Date(document.getElementById('d1').value);
+        const end = new Date(document.getElementById('d2').value);
+        if (start > end) return;
+        const corps = document.getElementById('corps-table');
+        corps.innerHTML = "";
+        let c = new Date(start);
+        while(c <= end) {
+            const jourSem = c.getDay();
+            const estOuv = (jourSem >= 0 && jourSem <= 4);
+            const dISO = c.toISOString().split('T')[0];
+            const dStr = c.toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
+            corps.innerHTML += `
+                <div class="row-pointage ${!estOuv ? 'weekend-row' : ''}" data-date="${dISO}" data-ouv="${estOuv}">
+                    <div style="text-align:left"><b>${dStr}</b></div>
+                    <div><input type="checkbox" class="isP" ${estOuv?'checked':''} onchange="majStats()"></div>
+                    <div><input type="time" class="t1" value="08:00" onchange="majStats()"></div>
+                    <div><input type="time" class="t2" value="16:00" onchange="majStats()"></div>
+                    <div class="resT">8.0h</div><div class="resS">0h</div>
+                    <div><select class="typeJ" onchange="majStats()"><option value="Normal">Travail</option><option value="Férié">Férié</option><option value="Congé">Congé</option></select></div>
+                </div>`;
+            c.setDate(c.getDate() + 1);
+        }
+        document.getElementById('zonePointage').style.display = 'block';
+        document.getElementById('zonePeriodes').style.display = 'block';
+        document.getElementById('action-top').style.display = 'flex';
+        majStats();
+    }
+
+    function appliquerPeriode() {
+        const sP = document.getElementById('pStart').value;
+        const eP = document.getElementById('pEnd').value;
+        const type = document.getElementById('typeSelect').value;
+        if(!sP || !eP) return alert("Dates manquantes");
+
+        document.querySelectorAll('#corps-table .row-pointage').forEach(r => {
+            const rowD = r.getAttribute('data-date');
+            if(rowD >= sP && rowD <= eP) {
+                r.querySelector('.typeJ').value = type;
+                if(type !== "Normal") r.querySelector('.isP').checked = true;
+            }
+        });
+
+        // Affichage Historique
+        const hZone = document.getElementById('historyZone');
+        const hList = document.getElementById('historyList');
+        hZone.style.display = 'block';
+        const span = document.createElement('span');
+        span.className = 'history-item';
+        span.innerText = `${type} : du ${sP} au ${eP}`;
+        hList.appendChild(span);
+
+        majStats();
+    }
+
+    function majStats() {
+        let presJ = 0, absJ = 0, hT = 0, hS = 0, ferJ = 0, conJ = 0;
+        document.querySelectorAll('#corps-table .row-pointage').forEach(r => {
+            const p = r.querySelector('.isP').checked;
+            const ouv = r.getAttribute('data-ouv') === "true";
+            const type = r.querySelector('.typeJ').value;
+            const m1 = toMin(r.querySelector('.t1').value);
+            const m2 = toMin(r.querySelector('.t2').value);
+            let th = p ? (m2 - m1) / 60 : 0;
+            let sh = (type === "Férié" || type === "Congé") ? 0 : Math.max(0, th - 8);
+            r.querySelector('.resT').innerText = th.toFixed(1) + "h";
+            r.querySelector('.resS').innerText = sh > 0 ? sh.toFixed(1) + "h" : "0h";
+            r.classList.remove('ferie-row', 'conge-row');
+            if (p) {
+                if (type === 'Férié') { r.classList.add('ferie-row'); ferJ++; }
+                else if (type === 'Congé') { r.classList.add('conge-row'); conJ++; }
+                else presJ++;
+                hT += th; hS += sh;
+            } else if(ouv) { absJ++; }
+        });
+        document.getElementById('stJ').innerText = presJ;
+        document.getElementById('stFer').innerText = ferJ;
+        document.getElementById('stCon').innerText = conJ;
+        document.getElementById('stAbsJ').innerText = absJ;
+        document.getElementById('stH').innerText = hT.toFixed(1) + "h";
+        document.getElementById('stS').innerText = hS.toFixed(1) + "h";
+    }
+
+    function exporterExcel() {
+        const nomEl = document.getElementById('nom'), preEl = document.getElementById('prenom'), posEl = document.getElementById('post');
+        let valid = true;
+        [nomEl, preEl, posEl].forEach(el => {
+            if(!el.value.trim()) { el.classList.add('error-field'); valid = false; }
+        });
+        if(!valid) return alert("Champs obligatoires manquants !");
+
+        const nom = nomEl.value, pre = preEl.value, pos = posEl.value;
+
+        let html = `<html><head><meta charset="UTF-8"><style>
+            .h { background-color: #1e3a8a; color: white; font-weight: bold; border: 1px solid black; }
+            .stat-l { background-color: #f1f5f9; font-weight: bold; border: 1px solid black; }
+            .weekend { background-color: #fff5f5; color: #ff0000; font-weight: bold; }
+            .ferie { background-color: #dcfce7; color: #15803d; font-weight: bold; }
+            .conge { background-color: #f0f9ff; color: #0369a1; font-weight: bold; }
+            .abs { background-color: #fee2e2; color: #b91c1c; }
+            td { border: 1px solid black; padding: 5px; text-align: center; }
+        </style></head><body>
+        <table>
+            <tr><td colspan="6" style="font-weight:bold; text-align:left; border:none;">${nom} ${pre}</td><td style="border:none"></td><td colspan="2" class="h">RECAPITULATIF</td></tr>
+            <tr><td colspan="6" style="text-align:left; border:none;">FONCTION : ${pos}</td><td style="border:none"></td><td class="stat-l">Jours Travaillés</td><td style="font-weight:bold; color:green;">${document.getElementById('stJ').innerText}</td></tr>
+            <tr><td class="h">Date</td><td class="h">Statut</td><td class="h">Début</td><td class="h">Fin</td><td class="h">Heures</td><td class="h">H. Sup</td><td style="border:none"></td><td class="stat-l">Jours Fériés</td><td style="font-weight:bold; color:green;">${document.getElementById('stFer').innerText}</td></tr>`;
+
+        const stats = [
+            ["Jours Congés", document.getElementById('stCon').innerText, "#0369a1"],
+            ["Absences", document.getElementById('stAbsJ').innerText, "red"],
+            ["Total Heures", document.getElementById('stH').innerText, "black"],
+            ["Heures Sup", document.getElementById('stS').innerText, "orange"]
+        ];
+
+        document.querySelectorAll('#corps-table .row-pointage').forEach((r, i) => {
+            const p = r.querySelector('.isP').checked, ouv = r.getAttribute('data-ouv') === "true", type = r.querySelector('.typeJ').value;
+            let stat = p ? (type === "Férié" ? "FERIE" : (type === "Congé" ? "CONGE" : "PRESENT")) : (ouv ? "ABSENT" : "WEEK-END");
+            let cls = (type === "Férié") ? 'class="ferie"' : (type === "Congé") ? 'class="conge"' : (!ouv) ? 'class="weekend"' : (!p && ouv ? 'class="abs"' : '');
+            let sCol = stats[i] ? `<td style="border:none"></td><td class="stat-l">${stats[i][0]}</td><td style="border:1px solid black; font-weight:bold; color:${stats[i][2]};">${stats[i][1]}</td>` : `<td colspan="3" style="border:none"></td>`;
+            html += `<tr ${cls}><td>${r.querySelector('b').innerText}</td><td>${stat}</td><td>${r.querySelector('.t1').value}</td><td>${r.querySelector('.t2').value}</td><td>${r.querySelector('.resT').innerText}</td><td>${r.querySelector('.resS').innerText}</td>${sCol}</tr>`;
+        });
+
+        html += `</table></body></html>`;
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `Pointage_${nom}_${pre}_${pos}.xls`;
+        a.click();
+    }
+</script>
+</body>
+</html>
